@@ -1,16 +1,17 @@
 {
-  "name": "jsonata",
+  "name": "jsonata-sync",
   "version": "2.1.0",
   "description": "JSON query and transformation language",
   "module": "jsonata.js",
-  "main": "jsonata.js",
-  "typings": "jsonata.d.ts",
+  "main": "sync.js",
+  "typings": "sync-types.d.ts",
   "homepage": "http://jsonata.org/",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsonata-js/jsonata.git"
   },
   "scripts": {
+    "w": "NODE_OPTIONS=--openssl-legacy-provider npx webpack && cp src/sync-promise.js sync.js && echo 'let Promise = SyncPromise;' >> sync.js && cat dist/bundle.js >> sync.js && rm dist/bundle.js",
     "pretest": "npm run lint",
     "mocha": "nyc ./node_modules/mocha/bin/_mocha -- \"test/**/*.js\"",
     "test": "npm run mocha",
@@ -41,6 +42,8 @@
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.4",
     "@babel/preset-env": "^7.8.4",
+    "babel-loader": "8.2.2",
+    "babel-plugin-transform-async-to-promises": "0.8.15",
     "browserify": "^16.5.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
@@ -54,7 +57,9 @@
     "nyc": "^15.1.0",
     "regenerator": "^0.14.4",
     "request": "^2.88.2",
-    "uglify-es": "^3.3.10"
+    "uglify-es": "^3.3.10",
+    "webpack": "5.24.2",
+    "webpack-cli": "4.5.0"
   },
   "engines": {
     "node": ">= 8"
