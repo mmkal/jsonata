@@ -956,32 +956,53 @@ describe("Tests that are specific to a Javascript runtime", () => {
         });
     });
     describe("Expressions that attempt to pollute the object prototype", function() {
-        it("should throw an error with __proto__", async function() {
+        // A path step reads an object's own properties only, so `__proto__`, `constructor`
+        // and the rest of Object.prototype can't be reached from an expression.
+        it("can't define a getter on Object.prototype", async function() {
+            const expr = jsonata('($d := payload.__proto__.__defineGetter__; $o := payload.constructor; payload.__proto__.$d("polluted", $o))');
+            expect(await expr.evaluate({payload: {}})).to.equal(undefined);
+            expect({}.polluted).to.equal(undefined);
+        });
+        it("can't update Object.prototype through __proto__", async function() {
             const expr = jsonata('{} ~> | __proto__ | {"is_admin": true} |');
-            expect(
-                expr.evaluate()
-            ).to.eventually.be.rejected.to.deep.contain({
-                position: 7,
-                code: "D1010",
-            });
+            expect(await expr.evaluate()).to.deep.equal({});
+            expect({}.is_admin).to.equal(undefined);
         });
-        it("should throw an error with __lookupGetter__", async function() {
+        it("can't call __lookupGetter__", async function() {
             const expr = jsonata('{} ~> | __lookupGetter__("__proto__")() | {"is_admin": true} |');
-            expect(
+            await expect(
                 expr.evaluate()
             ).to.eventually.be.rejected.to.deep.contain({
-                position: 7,
-                code: "D1010",
+                position: 25,
+                code: "T1006",
+                token: "__lookupGetter__",
             });
+            expect({}.is_admin).to.equal(undefined);
         });
-        it("should throw an error with constructor", async function() {
+        it("can't update Object through constructor", async function() {
             const expr = jsonata('{} ~> | constructor | {"is_admin": true} |');
-            expect(
-                expr.evaluate()
+            expect(await expr.evaluate()).to.deep.equal({});
+            expect(Object.is_admin).to.equal(undefined);
+        });
+        it("reads own properties that share a name with Object.prototype's", async function() {
+            const expr = jsonata('[inherited.constructor, inherited.__proto__, inherited.toString, $lookup(inherited, "constructor"), own.constructor, own.toString]');
+            const input = {inherited: {}, own: {constructor: "own constructor", toString: "own toString"}};
+            expect(await expr.evaluate(input)).to.deep.equal(["own constructor", "own toString"]);
+        });
+        it("allows a variable and an object key named hasOwnProperty", async function() {
+            const expr = jsonata('($hasOwnProperty := 1; {"hasOwnProperty": $hasOwnProperty, "other": 2})');
+            expect(await expr.evaluate()).to.deep.equal({hasOwnProperty: 1, other: 2});
+        });
+        it("still refuses to update a prototype the input holds", async function() {
+            // `$clone` is overridden so the match is the caller's own Object.prototype rather than a copy
+            const expr = jsonata('($clone := function($v) { $v }; $ ~> | proto | {"is_admin": true} |)');
+            await expect(
+                expr.evaluate({proto: Object.prototype})
             ).to.eventually.be.rejected.to.deep.contain({
-                position: 7,
+                position: 38,
                 code: "D1010",
             });
+            expect({}.is_admin).to.equal(undefined);
         });
     });
 });
