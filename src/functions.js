@@ -1686,7 +1686,8 @@ const functions = (() => {
                     }
                 }
             }
-        } else if (input !== null && typeof input === 'object' && !isFunction(input)) {
+        } else if (input !== null && typeof input === 'object' && !isFunction(input) && Object.prototype.hasOwnProperty.call(input, key)) {
+            // own properties only, so `__proto__`, `constructor` and the rest of Object.prototype can't be reached
             result = input[key];
         }
         return result;
